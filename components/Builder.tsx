@@ -9,7 +9,7 @@ import { Download, Layout, Share2, X, Check, Plus, Eye, Smartphone, Monitor, Hom
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface BuilderProps {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 const Builder: React.FC<BuilderProps> = ({ onBack }) => {
@@ -336,9 +336,11 @@ const Builder: React.FC<BuilderProps> = ({ onBack }) => {
               
               {/* Logo Pill */}
               <div className="bg-white/90 backdrop-blur-xl px-2 py-2 rounded-2xl shadow-lg shadow-black/5 border border-white/50 flex gap-2 items-center pointer-events-auto select-none">
-                 <button onClick={onBack} className="w-9 h-9 bg-gradient-to-br from-gray-900 to-gray-700 text-white rounded-xl flex items-center justify-center hover:from-black hover:to-gray-800 transition-all shadow-md" title="Back to Home">
-                    <Home size={16} />
-                 </button>
+                 {onBack && (
+                   <button onClick={onBack} className="w-9 h-9 bg-gradient-to-br from-gray-900 to-gray-700 text-white rounded-xl flex items-center justify-center hover:from-black hover:to-gray-800 transition-all shadow-md" title="Back to Home">
+                      <Home size={16} />
+                   </button>
+                 )}
                  <span className="font-bold text-gray-800 tracking-tight px-1">OpenBento</span>
                  <div className="h-6 w-px bg-gray-200 mx-1"></div>
                  {/* Profile Dropdown */}

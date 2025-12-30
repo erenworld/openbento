@@ -44,6 +44,20 @@
 
 4. Open [http://localhost:3000](http://localhost:3000) in your browser
 
+### Landing Page (Optional)
+
+By default, the app opens directly on the builder (no landing page) to make self-hosting easier.
+
+To enable the landing page:
+```bash
+VITE_ENABLE_LANDING=true npm run dev
+```
+
+For production builds:
+```bash
+VITE_ENABLE_LANDING=true npm run build
+```
+
 ### Build for Production
 
 ```bash
