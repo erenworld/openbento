@@ -579,6 +579,14 @@ footer a:hover {
 }
 
 /* Responsive */
+/* Mobile: Reset grid positioning to stack blocks naturally */
+@media (max-width: 639px) {
+  .bento-item {
+    grid-column: auto !important;
+    grid-row: auto !important;
+  }
+}
+
 @media (min-width: 640px) {
   .bento-grid { grid-template-columns: repeat(2, 1fr); }
   .col-span-2 { grid-column: span 2; }
@@ -696,6 +704,16 @@ document.addEventListener('DOMContentLoaded', () => {
 const generateHtml = (data: SiteData, imageMap: Record<string, string>): string => {
   const { profile, blocks } = data;
   const avatarSrc = imageMap['profile_avatar'] || profile.avatarUrl;
+  
+  // Sort blocks by grid position (row first, then column) for correct visual order
+  const sortedBlocks = [...blocks].sort((a, b) => {
+    const aRow = a.gridRow ?? 999;
+    const bRow = b.gridRow ?? 999;
+    const aCol = a.gridColumn ?? 999;
+    const bCol = b.gridColumn ?? 999;
+    if (aRow !== bRow) return aRow - bRow;
+    return aCol - bCol;
+  });
 
   const renderBlock = (block: BlockData) => {
     let contentHtml = '';
@@ -820,7 +838,12 @@ const generateHtml = (data: SiteData, imageMap: Record<string, string>): string 
 
     const tag = (block.content && !block.channelId && block.type !== BlockType.TEXT) ? 'a' : 'div';
     const href = tag === 'a' ? `href="${block.content}" target="_blank"` : '';
-    const style = `background: ${bgStyle}; color: ${textStyle};`;
+    
+    // Add explicit grid positioning for correct order
+    const gridPosition = block.gridColumn !== undefined && block.gridRow !== undefined 
+      ? `grid-column: ${block.gridColumn} / span ${Math.min(block.colSpan, 3)}; grid-row: ${block.gridRow} / span ${block.rowSpan};`
+      : '';
+    const style = `background: ${bgStyle}; color: ${textStyle}; ${gridPosition}`;
     const noHover = !isInteractive ? 'no-hover' : '';
 
     return `<${tag} ${href} class="bento-item ${colClass} ${rowClass} ${noHover}" style="${style}">${contentHtml}</${tag}>`;
@@ -849,7 +872,7 @@ const generateHtml = (data: SiteData, imageMap: Record<string, string>): string 
         <!-- Grid -->
         <div class="grid-section">
             <main class="bento-grid">
-                ${blocks.map(renderBlock).join('')}
+                ${sortedBlocks.map(renderBlock).join('')}
             </main>
         </div>
     </div>

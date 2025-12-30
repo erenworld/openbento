@@ -444,32 +444,46 @@ const Builder: React.FC<BuilderProps> = ({ onBack }) => {
                     
                     {viewMode === 'mobile' ? (
                         /* MOBILE FRAME */
-                        <div className="mockup-phone border-gray-800 border-[14px] rounded-[3rem] h-[800px] w-[375px] shadow-2xl bg-white overflow-hidden relative">
-                             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-800 rounded-b-xl z-20"></div>
-                             <div className="h-full w-full overflow-y-auto no-scrollbar pb-20 bg-[#F7F7F7]">
-                                <div className="p-6 flex flex-col items-center text-center mt-8">
-                                    <img src={profile.avatarUrl} alt="Avatar" className="w-24 h-24 rounded-full mb-4 object-cover ring-2 ring-white shadow-lg"/>
-                                    <h1 className="text-2xl font-bold text-gray-900 leading-tight">{profile.name}</h1>
-                                    <p className="text-sm text-gray-500 mt-2">{profile.bio}</p>
-                                </div>
-                                <div className="p-4 grid grid-cols-1 gap-4">
-                                    {blocks.map(block => (
-                                        <div className="pointer-events-none transform scale-100 origin-top" key={block.id}>
-                                            <Block 
-                                                block={{...block, colSpan: 1, rowSpan: 1}} 
-                                                isSelected={false}
-                                                onEdit={() => {}}
-                                                onDelete={() => {}}
-                                                onDragStart={() => {}}
-                                                onDragEnter={() => {}}
-                                                onDragEnd={() => {}}
-                                                onDrop={() => {}}
-                                            />
+                        (() => {
+                            // Sort blocks by grid position (row first, then column) for correct visual order
+                            const sortedMobileBlocks = [...blocks].sort((a, b) => {
+                                const aRow = a.gridRow ?? 999;
+                                const bRow = b.gridRow ?? 999;
+                                const aCol = a.gridColumn ?? 999;
+                                const bCol = b.gridColumn ?? 999;
+                                if (aRow !== bRow) return aRow - bRow;
+                                return aCol - bCol;
+                            });
+                            
+                            return (
+                                <div className="mockup-phone border-gray-800 border-[14px] rounded-[3rem] h-[800px] w-[375px] shadow-2xl bg-white overflow-hidden relative">
+                                     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-800 rounded-b-xl z-20"></div>
+                                     <div className="h-full w-full overflow-y-auto no-scrollbar pb-20 bg-[#F7F7F7]">
+                                        <div className="p-6 flex flex-col items-center text-center mt-8">
+                                            <img src={profile.avatarUrl} alt="Avatar" className="w-24 h-24 rounded-full mb-4 object-cover ring-2 ring-white shadow-lg"/>
+                                            <h1 className="text-2xl font-bold text-gray-900 leading-tight">{profile.name}</h1>
+                                            <p className="text-sm text-gray-500 mt-2">{profile.bio}</p>
                                         </div>
-                                    ))}
+                                        <div className="p-4 grid grid-cols-1 gap-4">
+                                            {sortedMobileBlocks.map(block => (
+                                                <div className="pointer-events-none transform scale-100 origin-top" key={block.id}>
+                                                    <Block 
+                                                        block={{...block, colSpan: 1, rowSpan: 1}} 
+                                                        isSelected={false}
+                                                        onEdit={() => {}}
+                                                        onDelete={() => {}}
+                                                        onDragStart={() => {}}
+                                                        onDragEnter={() => {}}
+                                                        onDragEnd={() => {}}
+                                                        onDrop={() => {}}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                     </div>
                                 </div>
-                             </div>
-                        </div>
+                            );
+                        })()
                     ) : (
                         /* DESKTOP GRID - Fixed grid with explicit positioning */
                         <>
