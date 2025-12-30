@@ -1,9 +1,10 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BarChart3, Download, Settings, Upload, X } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { AVATAR_PLACEHOLDER } from '../constants';
 import type { ExportDeploymentTarget } from '../services/exportService';
+import ImageCropModal from './ImageCropModal';
 
 type SettingsModalProps = {
   isOpen: boolean;
@@ -29,6 +30,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   setAnalyticsAdminToken,
 }) => {
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [pendingAvatarSrc, setPendingAvatarSrc] = useState<string | null>(null);
 
   const analyticsSupabaseUrl = useMemo(() => {
     return profile.analytics?.supabaseUrl?.trim().replace(/\/+$/, '') || '';
@@ -48,9 +50,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      setProfile({ ...profile, avatarUrl: reader.result as string });
+      const result = typeof reader.result === 'string' ? reader.result : null;
+      if (!result) return;
+      setPendingAvatarSrc(result);
     };
     reader.readAsDataURL(file);
+
+    try {
+      e.target.value = '';
+    } catch {
+      // ignore
+    }
   };
 
   const resetAvatar = () => setProfile({ ...profile, avatarUrl: AVATAR_PLACEHOLDER });
@@ -319,6 +329,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </button>
             </div>
           </motion.div>
+
+          <ImageCropModal
+            isOpen={!!pendingAvatarSrc}
+            src={pendingAvatarSrc || ''}
+            title="Crop profile photo"
+            onCancel={() => setPendingAvatarSrc(null)}
+            onConfirm={(dataUrl) => {
+              setProfile((prev) => ({ ...prev, avatarUrl: dataUrl }));
+              setPendingAvatarSrc(null);
+            }}
+          />
         </motion.div>
       )}
     </AnimatePresence>
@@ -326,4 +347,3 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 };
 
 export default SettingsModal;
-
