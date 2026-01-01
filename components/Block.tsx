@@ -3,6 +3,7 @@ import { BlockData, BlockType } from '../types';
 import { Youtube, MoveVertical, Play, Loader2, Pencil, Move, Check, X, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getSocialPlatformOption, inferSocialPlatformFromUrl } from '../socialPlatforms';
+import { openSafeUrl, isValidYouTubeChannelId, isValidLocationString, sanitizeUrl } from '../utils/security';
 
 // Apple TV style 3D tilt effect hook
 const useTiltEffect = (isEnabled: boolean = true) => {
@@ -598,9 +599,9 @@ const Block: React.FC<BlockProps> = ({
         onDragEnd={onDragEnd}
         onDrop={(e) => { e.preventDefault(); onDrop(block.id); }}
         onClick={() => {
-          if (previewMode && block.channelId) {
-            window.open(`https://youtube.com/channel/${block.channelId}`, '_blank');
-          } else {
+          if (previewMode && block.channelId && isValidYouTubeChannelId(block.channelId)) {
+            openSafeUrl(`https://youtube.com/channel/${block.channelId}`);
+          } else if (!previewMode) {
             onEdit(block);
           }
         }}
@@ -708,15 +709,14 @@ const Block: React.FC<BlockProps> = ({
       onDrop={(e) => { e.preventDefault(); onDrop(block.id); }}
       onClick={() => {
         if (previewMode) {
-          // In preview mode, navigate to block URL
+          // In preview mode, navigate to block URL with security validation
           let url = block.content;
           if (block.type === BlockType.SOCIAL && block.socialPlatform && block.socialHandle) {
             const option = getSocialPlatformOption(block.socialPlatform);
             url = option?.buildUrl(block.socialHandle);
           }
-          if (url) {
-            window.open(url, '_blank');
-          }
+          // SECURITY: Only open safe URLs (http/https)
+          openSafeUrl(url);
         } else {
           onEdit(block);
         }
@@ -933,13 +933,21 @@ const Block: React.FC<BlockProps> = ({
         ) : block.type === BlockType.MAP ? (
           /* MAP BLOCK - Clean minimal */
           <div className="w-full h-full relative bg-gray-100 overflow-hidden">
-              <iframe
-                  width="100%"
-                  height="100%"
-                  className="opacity-95 grayscale-[20%] group-hover:grayscale-0 transition-all duration-500"
-                  src={`https://maps.google.com/maps?q=${encodeURIComponent(block.content || 'Paris')}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
-                  loading="lazy"
-              ></iframe>
+              {/* SECURITY: Only render iframe if location is valid (not a URL/script) */}
+              {isValidLocationString(block.content) ? (
+                <iframe
+                    width="100%"
+                    height="100%"
+                    className="opacity-95 grayscale-[20%] group-hover:grayscale-0 transition-all duration-500"
+                    src={`https://maps.google.com/maps?q=${encodeURIComponent(block.content || 'Paris')}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
+                    loading="lazy"
+                    sandbox="allow-scripts allow-same-origin"
+                ></iframe>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
+                  Invalid location
+                </div>
+              )}
               {block.title && (
                 <div className="absolute bottom-0 left-0 right-0 p-2 md:p-3 bg-gradient-to-t from-black/60 to-transparent">
                   <p className={`font-semibold text-white drop-shadow ${textSizes.overlayTitle}`}>{block.title}</p>

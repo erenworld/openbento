@@ -73,11 +73,28 @@ export type SocialPlatformOption = {
 
 const normalizeHandle = (value: string): string => value.trim().replace(/^@+/, '');
 
+// SECURITY: Validate URL has safe protocol
+const isValidHttpUrl = (url: string): boolean => {
+  try {
+    const parsed = new URL(url);
+    return ['http:', 'https:'].includes(parsed.protocol);
+  } catch {
+    return false;
+  }
+};
+
 const ensureHttps = (value: string): string => {
   const trimmed = value.trim();
   if (!trimmed) return '';
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  return `https://${trimmed.replace(/^\/+/, '')}`;
+
+  // If already has protocol, validate it's http/https
+  if (/^https?:\/\//i.test(trimmed)) {
+    return isValidHttpUrl(trimmed) ? trimmed : '';
+  }
+
+  // Add https and validate
+  const withHttps = `https://${trimmed.replace(/^\/+/, '')}`;
+  return isValidHttpUrl(withHttps) ? withHttps : '';
 };
 
 export const SOCIAL_PLATFORM_OPTIONS: SocialPlatformOption[] = [
@@ -268,10 +285,15 @@ export const SOCIAL_PLATFORM_OPTIONS: SocialPlatformOption[] = [
     buildUrl: (input) => {
       const raw = input.trim();
       if (!raw) return '';
-      if (/^https?:\/\//i.test(raw)) return raw;
+      // SECURITY: If user provides URL, validate it's http/https before returning
+      if (/^https?:\/\//i.test(raw)) {
+        return isValidHttpUrl(raw) ? raw : '';
+      }
       const cleaned = raw.replace(/^@+/, '');
       const [user, instance] = cleaned.split('@');
       if (!user || !instance) return '';
+      // SECURITY: Validate instance is a valid domain (no special chars that could break URL)
+      if (!/^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$/.test(instance)) return '';
       return `https://${instance}/@${encodeURIComponent(user)}`;
     },
     formatHandleForDisplay: (h) => {

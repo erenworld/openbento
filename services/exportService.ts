@@ -876,13 +876,18 @@ footer a:hover {
 `;
 };
 
-const escapeAttr = (value: string) =>
-  value
+// SECURITY: Escape HTML special characters to prevent XSS
+const escapeHtml = (value: string | undefined | null): string => {
+  if (!value) return '';
+  return String(value)
     .replaceAll('&', '&amp;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;')
     .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;');
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+};
+
+const escapeAttr = (value: string) => escapeHtml(value);
 
 const generateJS = (opts: { analytics?: { enabled: boolean; supabaseUrl: string; anonKey: string; siteId: string } }) => `
 document.addEventListener('DOMContentLoaded', () => {
@@ -1151,9 +1156,9 @@ const generateHtml = (data: SiteData, imageMap: Record<string, string>): string 
       const iconSrc = getSimpleIconSrc(account.platform, iconColor);
       const fallbackLetter = label.slice(0, 1).toUpperCase();
       const iconHtml = iconSrc
-        ? `<span class="social-icon"><span class="social-fallback">${fallbackLetter}</span><img src="${iconSrc}" alt="${escapeAttr(label)}" onerror="this.style.display='none';" /></span>`
-        : `<span class="social-icon"><span class="social-fallback">${fallbackLetter}</span></span>`;
-      const countHtml = hasCount ? `<span class="social-count">${count}</span>` : '';
+        ? `<span class="social-icon"><span class="social-fallback">${escapeHtml(fallbackLetter)}</span><img src="${escapeAttr(iconSrc)}" alt="${escapeAttr(label)}" onerror="this.style.display='none';" /></span>`
+        : `<span class="social-icon"><span class="social-fallback">${escapeHtml(fallbackLetter)}</span></span>`;
+      const countHtml = hasCount ? `<span class="social-count">${escapeHtml(count)}</span>` : '';
       const cls = hasCount ? 'profile-social' : 'profile-social icon-only';
       const tag = url ? 'a' : 'div';
       const href = url ? `href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer"` : '';
@@ -1213,8 +1218,10 @@ const generateHtml = (data: SiteData, imageMap: Record<string, string>): string 
         const isSmall = block.colSpan === 1 && block.rowSpan === 1;
         const isTall = block.colSpan === 1 && block.rowSpan >= 2;
         const sizeClass = isLarge ? 'size-large' : (isSmall ? 'size-small' : (isTall ? 'size-tall' : ''));
-        
-        const fetcherAttrs = `data-channel-id="${block.channelId}" data-mode="${mode}" data-size="${sizeClass}"`;
+
+        // SECURITY: Validate channel ID format (UC followed by 22 alphanumeric chars)
+        const safeChannelId = /^UC[a-zA-Z0-9_-]{22}$/.test(block.channelId) ? block.channelId : '';
+        const fetcherAttrs = `data-channel-id="${escapeAttr(safeChannelId)}" data-mode="${escapeAttr(mode)}" data-size="${escapeAttr(sizeClass)}"`;
 
         if (isMulti) {
              const videosToShow = isSmall ? 2 : 4;
@@ -1225,7 +1232,7 @@ const generateHtml = (data: SiteData, imageMap: Record<string, string>): string 
                         <svg width="${isSmall ? 14 : 18}" height="${isSmall ? 14 : 18}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></svg>
                     </div>
                     <div class="yt-header-text">
-                        <h3 data-role="channel-title">${block.channelTitle || 'YouTube'}</h3>
+                        <h3 data-role="channel-title">${escapeHtml(block.channelTitle) || 'YouTube'}</h3>
                         <span>Latest Videos</span>
                     </div>
                 </div>
@@ -1235,10 +1242,12 @@ const generateHtml = (data: SiteData, imageMap: Record<string, string>): string 
              </div>`;
         } else {
              const vidId = block.youtubeVideoId || '';
-             const bgUrl = vidId ? `https://img.youtube.com/vi/${vidId}/maxresdefault.jpg` : '';
+             // SECURITY: Validate video ID format (alphanumeric, dash, underscore only)
+             const safeVidId = /^[a-zA-Z0-9_-]+$/.test(vidId) ? vidId : '';
+             const bgUrl = safeVidId ? `https://img.youtube.com/vi/${safeVidId}/maxresdefault.jpg` : '';
              contentHtml = `
              <div ${fetcherAttrs} class="yt-single">
-                <div class="yt-single-bg" style="background-image:url('${bgUrl}');" data-role="bg-image"></div>
+                <div class="yt-single-bg" style="background-image:url('${escapeAttr(bgUrl)}');" data-role="bg-image"></div>
                 <div class="yt-single-overlay"></div>
                 <div class="yt-single-content">
                     <div class="yt-single-icon">
@@ -1248,8 +1257,8 @@ const generateHtml = (data: SiteData, imageMap: Record<string, string>): string 
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><polygon points="10 8 16 12 10 16 10 8"/></svg>
                     </a>
                     <div class="yt-single-info">
-                        <h3 data-role="channel-title">${block.channelTitle || block.title}</h3>
-                        <p data-role="video-title">${block.subtext || ''}</p>
+                        <h3 data-role="channel-title">${escapeHtml(block.channelTitle || block.title)}</h3>
+                        <p data-role="video-title">${escapeHtml(block.subtext)}</p>
                     </div>
                 </div>
              </div>`;
@@ -1261,23 +1270,29 @@ const generateHtml = (data: SiteData, imageMap: Record<string, string>): string 
             case BlockType.MEDIA:
                 const mediaPos = block.mediaPosition || { x: 50, y: 50 };
                 const mediaPosStyle = `object-position: ${mediaPos.x}% ${mediaPos.y}%;`;
-                contentHtml = `<img src="${blockImageSrc}" class="full-img" style="${mediaPosStyle}" alt="${block.title || ''}" />`;
+                contentHtml = `<img src="${escapeAttr(blockImageSrc)}" class="full-img" style="${mediaPosStyle}" alt="${escapeAttr(block.title || '')}" />`;
                 if (block.title) {
                   contentHtml += `
                   <div class="media-overlay">
-                    <div class="media-title">${block.title}</div>
-                    ${block.subtext ? `<div class="media-subtext">${block.subtext}</div>` : ''}
+                    <div class="media-title">${escapeHtml(block.title)}</div>
+                    ${block.subtext ? `<div class="media-subtext">${escapeHtml(block.subtext)}</div>` : ''}
                   </div>`;
                 }
                 break;
             case BlockType.MAP:
-                contentHtml = `<iframe width="100%" height="100%" frameborder="0" style="position:absolute; inset:0; filter:grayscale(0.5) contrast(1.1); pointer-events:none;" src="https://maps.google.com/maps?q=${encodeURIComponent(block.content || 'Paris')}&t=&z=13&ie=UTF8&iwloc=&output=embed"></iframe>`;
+                // SECURITY: Validate location string and add sandbox
+                const location = block.content || 'Paris';
+                const dangerousPatterns = [/^javascript:/i, /^data:/i, /^vbscript:/i, /^file:/i, /^about:/i, /^blob:/i];
+                const isSafeLocation = !dangerousPatterns.some(p => p.test(location.trim()));
+                contentHtml = isSafeLocation
+                  ? `<iframe width="100%" height="100%" frameborder="0" sandbox="allow-scripts allow-same-origin" style="position:absolute; inset:0; filter:grayscale(0.5) contrast(1.1); pointer-events:none;" src="https://maps.google.com/maps?q=${encodeURIComponent(location)}&t=&z=13&ie=UTF8&iwloc=&output=embed"></iframe>`
+                  : `<div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#9ca3af;">Invalid location</div>`;
                 break;
             case BlockType.TEXT:
                 contentHtml = `
                 <div class="content-wrapper type-text">
-                    <h3 class="block-title">${block.title || ''}</h3>
-                    <p class="block-body">${block.content || ''}</p>
+                    <h3 class="block-title">${escapeHtml(block.title)}</h3>
+                    <p class="block-body">${escapeHtml(block.content)}</p>
                 </div>`;
                 break;
             case BlockType.SOCIAL:
@@ -1286,10 +1301,10 @@ const generateHtml = (data: SiteData, imageMap: Record<string, string>): string 
                 if (isLinkWithImage) {
                      const linkMediaPos = block.mediaPosition || { x: 50, y: 50 };
                      contentHtml = `
-                     <div style="position:absolute; inset:0; background-image:url('${blockImageSrc}'); background-size:cover; background-position:${linkMediaPos.x}% ${linkMediaPos.y}%;" class="full-img"></div>
+                     <div style="position:absolute; inset:0; background-image:url('${escapeAttr(blockImageSrc)}'); background-size:cover; background-position:${linkMediaPos.x}% ${linkMediaPos.y}%;" class="full-img"></div>
                      <div class="media-overlay">
-                       <div class="media-title">${block.title || 'Link'}</div>
-                       ${block.subtext ? `<div class="media-subtext">${block.subtext}</div>` : ''}
+                       <div class="media-title">${escapeHtml(block.title) || 'Link'}</div>
+                       ${block.subtext ? `<div class="media-subtext">${escapeHtml(block.subtext)}</div>` : ''}
                      </div>`;
                 } else {
                      if (block.type === BlockType.SOCIAL) {
@@ -1299,14 +1314,14 @@ const generateHtml = (data: SiteData, imageMap: Record<string, string>): string 
                        const iconSrc = getSimpleIconSrc(block.socialPlatform, iconColor);
                        const fallbackLetter = label.slice(0, 1).toUpperCase();
                        const iconHtml = iconSrc
-                         ? `<img src="${iconSrc}" alt="${escapeAttr(label)}" onerror="this.style.display='none';" />`
-                         : `<span class="icon-fallback">${fallbackLetter}</span>`;
+                         ? `<img src="${escapeAttr(iconSrc)}" alt="${escapeAttr(label)}" onerror="this.style.display='none';" />`
+                         : `<span class="icon-fallback">${escapeHtml(fallbackLetter)}</span>`;
                        contentHtml = `
                         <div class="content-wrapper">
                           <div class="icon-box">${iconHtml}</div>
                           <div>
-                            <div class="block-title">${block.title || 'Link'}</div>
-                            <div class="block-sub">${block.subtext || ''}</div>
+                            <div class="block-title">${escapeHtml(block.title) || 'Link'}</div>
+                            <div class="block-sub">${escapeHtml(block.subtext)}</div>
                           </div>
                         </div>`;
                        break;
@@ -1314,8 +1329,8 @@ const generateHtml = (data: SiteData, imageMap: Record<string, string>): string 
                      contentHtml = `
                      <div class="content-wrapper link-only">
                          <div>
-                             <div class="block-title">${block.title || 'Link'}</div>
-                             <div class="block-sub">${block.subtext || ''}</div>
+                             <div class="block-title">${escapeHtml(block.title) || 'Link'}</div>
+                             <div class="block-sub">${escapeHtml(block.subtext)}</div>
                          </div>
                      </div>`;
                 }
@@ -1327,8 +1342,8 @@ const generateHtml = (data: SiteData, imageMap: Record<string, string>): string 
                 const iconSrc = getSimpleIconSrc(block.socialPlatform, iconColor);
                 const fallbackLetter = label.slice(0, 1).toUpperCase();
                 const iconHtml = iconSrc
-                  ? `<div class="social-icon"><span class="social-fallback">${fallbackLetter}</span><img src="${iconSrc}" alt="${escapeAttr(label)}" onerror="this.style.display='none';" /></div>`
-                  : `<div class="social-icon"><span class="social-fallback">${fallbackLetter}</span></div>`;
+                  ? `<div class="social-icon"><span class="social-fallback">${escapeHtml(fallbackLetter)}</span><img src="${escapeAttr(iconSrc)}" alt="${escapeAttr(label)}" onerror="this.style.display='none';" /></div>`
+                  : `<div class="social-icon"><span class="social-fallback">${escapeHtml(fallbackLetter)}</span></div>`;
                 contentHtml = iconHtml;
                 explicitHref = buildSocialUrl(block.socialPlatform, block.socialHandle) || null;
                 extraClass = 'social-icon-block';
@@ -1379,8 +1394,8 @@ const generateHtml = (data: SiteData, imageMap: Record<string, string>): string 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${profile.name}</title>
-    <meta name="description" content="${profile.bio.replace(/\n/g, ' ')}">
+    <title>${escapeHtml(profile.name)}</title>
+    <meta name="description" content="${escapeAttr(profile.bio.replace(/\n/g, ' '))}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <script src="app.js" defer></script>
@@ -1390,9 +1405,9 @@ const generateHtml = (data: SiteData, imageMap: Record<string, string>): string 
     <div class="container">
         <!-- Profile -->
         <div class="profile-section">
-            <div class="avatar" style="${avatarInlineStyle}"><img src="${avatarSrc}" alt="${profile.name}"></div>
-            <h1 class="profile-name">${profile.name}</h1>
-            <p class="profile-bio">${profile.bio}</p>
+            <div class="avatar" style="${avatarInlineStyle}"><img src="${escapeAttr(avatarSrc)}" alt="${escapeAttr(profile.name)}"></div>
+            <h1 class="profile-name">${escapeHtml(profile.name)}</h1>
+            <p class="profile-bio">${escapeHtml(profile.bio)}</p>
             ${socialHeaderHtml}
         </div>
 

@@ -146,7 +146,13 @@ const simpleSupabaseSetupPlugin = (): Plugin => {
             const projectUrl = body?.projectUrl?.trim();
             const dbPassword = body?.dbPassword?.trim();
             const siteId = body?.siteId?.trim();
-            const days = parseInt(body?.days) || 30;
+
+            // SECURITY: Validate days as strict integer within bounds
+            const daysRaw = parseInt(body?.days, 10);
+            const days = Number.isInteger(daysRaw) && daysRaw >= 1 && daysRaw <= 365 ? daysRaw : 30;
+
+            // SECURITY: Validate siteId format (alphanumeric, hyphens, underscores only)
+            const siteIdValid = siteId && /^[a-zA-Z0-9_-]+$/.test(siteId);
 
             if (!projectUrl || !dbPassword) {
               json(res, 400, { ok: false, error: 'Missing projectUrl or dbPassword' });
@@ -162,8 +168,8 @@ const simpleSupabaseSetupPlugin = (): Plugin => {
             const dbHost = `db.${projectRef}.supabase.co`;
 
             try {
-              // Fetch all analytics data
-              const query = siteId
+              // Fetch all analytics data - using validated parameters only
+              const query = siteIdValid
                 ? `SELECT * FROM public.openbento_analytics_events WHERE site_id = '${siteId.replace(/'/g, "''")}' AND created_at > NOW() - INTERVAL '${days} days' ORDER BY created_at DESC LIMIT 10000`
                 : `SELECT * FROM public.openbento_analytics_events WHERE created_at > NOW() - INTERVAL '${days} days' ORDER BY created_at DESC LIMIT 10000`;
 
