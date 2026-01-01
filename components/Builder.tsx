@@ -6,7 +6,7 @@ import ProfileDropdown from './ProfileDropdown';
 import SettingsModal from './SettingsModal';
 import ImageCropModal from './ImageCropModal';
 import AvatarStyleModal from './AvatarStyleModal';
-import { exportSite, type ExportDeploymentTarget } from '../services/exportService';
+import { exportSite, type ExportDeploymentTarget } from '../services/export';
 import {
   initializeApp,
   updateBentoData,
