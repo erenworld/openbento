@@ -452,6 +452,140 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                     )}
                   </section>
+
+                  {/* Background Section */}
+                  <section className="space-y-4">
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Background</h3>
+
+                    {/* Background Color */}
+                    <div className="space-y-3">
+                      <label className="block text-sm font-medium text-gray-700">Background Color</label>
+
+                      {/* Color picker + Hex input row */}
+                      <div className="flex items-center gap-3">
+                        {/* Native color picker - large clickable area */}
+                        <div className="relative">
+                          <input
+                            type="color"
+                            value={profile.backgroundColor || '#F7F7F7'}
+                            onChange={(e) => setProfile({ ...profile, backgroundColor: e.target.value, backgroundImage: undefined })}
+                            className="w-12 h-12 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-violet-400 transition-colors"
+                            title="Open color picker"
+                          />
+                        </div>
+
+                        {/* Hex input */}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-400 font-mono">#</span>
+                            <input
+                              type="text"
+                              value={(profile.backgroundColor || '#F7F7F7').replace('#', '')}
+                              onChange={(e) => {
+                                let val = e.target.value.replace(/[^0-9a-fA-F]/g, '').slice(0, 6);
+                                if (val.length >= 3) {
+                                  setProfile({ ...profile, backgroundColor: `#${val}`, backgroundImage: undefined });
+                                }
+                              }}
+                              placeholder="F7F7F7"
+                              className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-mono uppercase focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                              maxLength={6}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Preview swatch */}
+                        <div
+                          className="w-12 h-12 rounded-xl border-2 border-gray-200 shadow-inner"
+                          style={{ backgroundColor: profile.backgroundColor || '#F7F7F7' }}
+                          title={profile.backgroundColor || '#F7F7F7'}
+                        />
+                      </div>
+
+                      {/* Preset colors */}
+                      <div className="flex gap-2 flex-wrap">
+                        {['#F7F7F7', '#ffffff', '#f0f0f0', '#e5e5e5', '#1a1a1a', '#0a0a0a', '#1e293b', '#0f172a', '#fef3c7', '#dbeafe', '#dcfce7', '#fce7f3'].map((color) => (
+                          <button
+                            key={color}
+                            type="button"
+                            onClick={() => setProfile({ ...profile, backgroundColor: color, backgroundImage: undefined })}
+                            className={`w-7 h-7 rounded-lg border-2 transition-all ${
+                              profile.backgroundColor === color && !profile.backgroundImage
+                                ? 'border-violet-500 scale-110 shadow-md'
+                                : 'border-gray-200 hover:border-gray-400'
+                            }`}
+                            style={{ backgroundColor: color }}
+                            title={color}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Background Image */}
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">Background Image</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={profile.backgroundImage || ''}
+                          onChange={(e) => setProfile({ ...profile, backgroundImage: e.target.value || undefined })}
+                          placeholder="https://example.com/image.jpg"
+                          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                        />
+                        <label className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg cursor-pointer transition-colors">
+                          <Upload size={16} className="text-gray-600" />
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onload = () => {
+                                  setProfile({ ...profile, backgroundImage: reader.result as string });
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                        </label>
+                        {profile.backgroundImage && (
+                          <button
+                            type="button"
+                            onClick={() => setProfile({ ...profile, backgroundImage: undefined })}
+                            className="px-3 py-2 bg-red-50 hover:bg-red-100 rounded-lg text-red-600 transition-colors"
+                            title="Remove background image"
+                          >
+                            <X size={16} />
+                          </button>
+                        )}
+                      </div>
+                      {profile.backgroundImage && (
+                        <div className="relative w-full h-24 rounded-lg overflow-hidden border border-gray-200">
+                          <img src={profile.backgroundImage} alt="Background preview" className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Background Blur (only when image is set) */}
+                    {profile.backgroundImage && (
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <label className="block text-sm font-medium text-gray-700">Blur Amount</label>
+                          <span className="text-xs text-gray-400">{profile.backgroundBlur || 0}px</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="20"
+                          value={profile.backgroundBlur || 0}
+                          onChange={(e) => setProfile({ ...profile, backgroundBlur: parseInt(e.target.value) })}
+                          className="w-full accent-violet-500"
+                        />
+                      </div>
+                    )}
+                  </section>
                 </>
               )}
 

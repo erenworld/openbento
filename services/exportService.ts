@@ -83,11 +83,26 @@ const resolveIconColor = (textColor?: string, brandColor?: string) => {
 
 // --- CONTENT GENERATORS ---
 
-const generateCSS = (profileName: string) => `
+interface BackgroundConfig {
+  backgroundColor?: string;
+  backgroundImage?: string;
+  backgroundBlur?: number;
+}
+
+const generateCSS = (profileName: string, bgConfig?: BackgroundConfig) => {
+  const bgColor = bgConfig?.backgroundColor || '#f8fafc';
+  const bgImage = bgConfig?.backgroundImage;
+  const bgBlur = bgConfig?.backgroundBlur || 0;
+
+  const bodyBackground = bgImage
+    ? `background-image: url('${bgImage}'); background-size: cover; background-position: center; background-attachment: fixed;`
+    : `background: ${bgColor};`;
+
+  return `
 ${COMMON_BLOCK_CSS}
 :root {
   --font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  --bg-color: #f8fafc;
+  --bg-color: ${bgColor};
   --text-main: #111827;
   --text-muted: #6b7280;
   --radius: 1.75rem;
@@ -98,12 +113,22 @@ ${COMMON_BLOCK_CSS}
 
 body {
   font-family: var(--font-family);
-  background: var(--bg-color);
+  ${bodyBackground}
   color: var(--text-main);
   min-height: 100vh;
-  opacity: 0; 
+  opacity: 0;
   animation: fadeInBody 0.8s ease-out forwards;
   position: relative;
+}
+
+/* Background blur overlay */
+.bg-blur-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  backdrop-filter: blur(${bgBlur}px);
+  -webkit-backdrop-filter: blur(${bgBlur}px);
+  pointer-events: none;
 }
 
 @keyframes fadeInBody {
@@ -849,6 +874,7 @@ footer a:hover {
 }
 
 `;
+};
 
 const escapeAttr = (value: string) =>
   value
@@ -1233,7 +1259,9 @@ const generateHtml = (data: SiteData, imageMap: Record<string, string>): string 
     else {
         switch (block.type) {
             case BlockType.MEDIA:
-                contentHtml = `<img src="${blockImageSrc}" class="full-img" alt="${block.title || ''}" />`;
+                const mediaPos = block.mediaPosition || { x: 50, y: 50 };
+                const mediaPosStyle = `object-position: ${mediaPos.x}% ${mediaPos.y}%;`;
+                contentHtml = `<img src="${blockImageSrc}" class="full-img" style="${mediaPosStyle}" alt="${block.title || ''}" />`;
                 if (block.title) {
                   contentHtml += `
                   <div class="media-overlay">
@@ -1256,8 +1284,9 @@ const generateHtml = (data: SiteData, imageMap: Record<string, string>): string 
             case BlockType.LINK:
                 const isLinkWithImage = block.type === BlockType.LINK && blockImageSrc;
                 if (isLinkWithImage) {
+                     const linkMediaPos = block.mediaPosition || { x: 50, y: 50 };
                      contentHtml = `
-                     <div style="position:absolute; inset:0; background-image:url('${blockImageSrc}'); background-size:cover; background-position:center;" class="full-img"></div>
+                     <div style="position:absolute; inset:0; background-image:url('${blockImageSrc}'); background-size:cover; background-position:${linkMediaPos.x}% ${linkMediaPos.y}%;" class="full-img"></div>
                      <div class="media-overlay">
                        <div class="media-title">${block.title || 'Link'}</div>
                        ${block.subtext ? `<div class="media-subtext">${block.subtext}</div>` : ''}
@@ -1340,6 +1369,11 @@ const generateHtml = (data: SiteData, imageMap: Record<string, string>): string 
     return `<${tag} ${href} ${analyticsAttrs} class="bento-item ${colClass} ${rowClass} ${noHover} ${extraClass} ${sizeClass}" style="${style}">${contentHtml}</${tag}>`;
   };
 
+  // Background blur overlay div
+  const blurOverlayHtml = profile.backgroundImage && profile.backgroundBlur && profile.backgroundBlur > 0
+    ? '<div class="bg-blur-overlay"></div>'
+    : '';
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1352,6 +1386,7 @@ const generateHtml = (data: SiteData, imageMap: Record<string, string>): string 
     <script src="app.js" defer></script>
 </head>
 <body>
+    ${blurOverlayHtml}
     <div class="container">
         <!-- Profile -->
         <div class="profile-section">
@@ -1377,7 +1412,12 @@ const generateHtml = (data: SiteData, imageMap: Record<string, string>): string 
 };
 
 export const generatePreviewSrcDoc = (data: SiteData, opts?: { siteId?: string }) => {
-  const css = generateCSS(data.profile.name);
+  const bgConfig: BackgroundConfig = {
+    backgroundColor: data.profile.backgroundColor,
+    backgroundImage: data.profile.backgroundImage,
+    backgroundBlur: data.profile.backgroundBlur,
+  };
+  const css = generateCSS(data.profile.name, bgConfig);
 
   const analyticsSupabaseUrl = data.profile.analytics?.supabaseUrl?.trim().replace(/\/+$/, '') || '';
   const analyticsAnonKey = data.profile.analytics?.anonKey?.trim() || '';
@@ -1607,7 +1647,12 @@ export const exportSite = async (
       }
   }
 
-  zip.file("styles.css", generateCSS(data.profile.name));
+  const bgConfig: BackgroundConfig = {
+    backgroundColor: data.profile.backgroundColor,
+    backgroundImage: data.profile.backgroundImage,
+    backgroundBlur: data.profile.backgroundBlur,
+  };
+  zip.file("styles.css", generateCSS(data.profile.name, bgConfig));
 
   const analyticsSupabaseUrl = data.profile.analytics?.supabaseUrl?.trim().replace(/\/+$/, '') || '';
   const analyticsAnonKey = data.profile.analytics?.anonKey?.trim() || '';

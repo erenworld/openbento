@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { BlockData, BlockType } from '../types';
-import { MapPin, Type, Image as ImageIcon, Link as LinkIcon, Twitter, Github, Linkedin, Youtube, Instagram, GripHorizontal, MoveVertical, Play, Loader2, ExternalLink, Pencil } from 'lucide-react';
+import { MapPin, Type, Image as ImageIcon, Link as LinkIcon, Twitter, Github, Linkedin, Youtube, Instagram, GripHorizontal, MoveVertical, Play, Loader2, ExternalLink, Pencil, Move, Check, X, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getSocialPlatformOption, inferSocialPlatformFromUrl } from '../socialPlatforms';
 
@@ -105,6 +105,77 @@ const Block: React.FC<BlockProps> = ({
   const [editSubtextValue, setEditSubtextValue] = useState(block.subtext || '');
   const titleInputRef = useRef<HTMLInputElement>(null);
   const subtextInputRef = useRef<HTMLInputElement>(null);
+
+  // Media repositioning state
+  const [isRepositioning, setIsRepositioning] = useState(false);
+  const [mediaPosition, setMediaPosition] = useState<{ x: number; y: number }>(
+    block.mediaPosition || { x: 50, y: 50 }
+  );
+  const [dragStart, setDragStart] = useState<{ x: number; y: number; posX: number; posY: number } | null>(null);
+  const mediaContainerRef = useRef<HTMLDivElement>(null);
+
+  // Update media position when block changes
+  useEffect(() => {
+    setMediaPosition(block.mediaPosition || { x: 50, y: 50 });
+  }, [block.mediaPosition]);
+
+  const handleMediaRepositionStart = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    setDragStart({ x: clientX, y: clientY, posX: mediaPosition.x, posY: mediaPosition.y });
+  };
+
+  const handleMediaRepositionMove = useCallback((e: MouseEvent | TouchEvent) => {
+    if (!dragStart || !mediaContainerRef.current) return;
+
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const rect = mediaContainerRef.current.getBoundingClientRect();
+
+    // Calculate movement as percentage of container size
+    const deltaX = ((clientX - dragStart.x) / rect.width) * 100;
+    const deltaY = ((clientY - dragStart.y) / rect.height) * 100;
+
+    // Invert because object-position works opposite to drag direction
+    const newX = Math.max(0, Math.min(100, dragStart.posX - deltaX));
+    const newY = Math.max(0, Math.min(100, dragStart.posY - deltaY));
+
+    setMediaPosition({ x: newX, y: newY });
+  }, [dragStart]);
+
+  const handleMediaRepositionEnd = useCallback(() => {
+    setDragStart(null);
+  }, []);
+
+  // Add/remove global event listeners for drag
+  useEffect(() => {
+    if (dragStart) {
+      window.addEventListener('mousemove', handleMediaRepositionMove);
+      window.addEventListener('mouseup', handleMediaRepositionEnd);
+      window.addEventListener('touchmove', handleMediaRepositionMove);
+      window.addEventListener('touchend', handleMediaRepositionEnd);
+      return () => {
+        window.removeEventListener('mousemove', handleMediaRepositionMove);
+        window.removeEventListener('mouseup', handleMediaRepositionEnd);
+        window.removeEventListener('touchmove', handleMediaRepositionMove);
+        window.removeEventListener('touchend', handleMediaRepositionEnd);
+      };
+    }
+  }, [dragStart, handleMediaRepositionMove, handleMediaRepositionEnd]);
+
+  const handleSaveMediaPosition = () => {
+    if (onInlineUpdate) {
+      onInlineUpdate({ ...block, mediaPosition });
+    }
+    setIsRepositioning(false);
+  };
+
+  const handleCancelMediaPosition = () => {
+    setMediaPosition(block.mediaPosition || { x: 50, y: 50 });
+    setIsRepositioning(false);
+  };
 
   // Update local state when block changes
   useEffect(() => {
@@ -247,43 +318,43 @@ const Block: React.FC<BlockProps> = ({
     if (minDim <= 3 || area <= 12) return 'md';
     return 'lg';
   })();
-  // Responsive text sizes: mobile first, then md: and lg: breakpoints
+  // Responsive text sizes: mobile first (smaller), then md: and lg: breakpoints
   const textScale = {
     titleText: {
-      xs: 'text-sm md:text-base',
-      sm: 'text-base md:text-lg',
-      md: 'text-lg md:text-xl lg:text-2xl',
-      lg: 'text-xl md:text-2xl lg:text-3xl',
+      xs: 'text-[10px] md:text-sm',
+      sm: 'text-xs md:text-base',
+      md: 'text-sm md:text-lg lg:text-xl',
+      lg: 'text-base md:text-xl lg:text-2xl',
     },
     titleDefault: {
-      xs: 'text-xs md:text-sm',
-      sm: 'text-sm md:text-base',
-      md: 'text-base md:text-lg',
-      lg: 'text-lg md:text-xl',
+      xs: 'text-[9px] md:text-xs',
+      sm: 'text-[10px] md:text-sm',
+      md: 'text-xs md:text-base',
+      lg: 'text-sm md:text-lg',
     },
     subtext: {
-      xs: 'text-[8px] md:text-[10px]',
-      sm: 'text-[10px] md:text-xs',
-      md: 'text-xs md:text-sm',
-      lg: 'text-sm md:text-base',
+      xs: 'text-[7px] md:text-[9px]',
+      sm: 'text-[8px] md:text-[10px]',
+      md: 'text-[9px] md:text-xs',
+      lg: 'text-[10px] md:text-sm',
     },
     body: {
-      xs: 'text-[10px] md:text-xs',
-      sm: 'text-xs md:text-sm',
-      md: 'text-sm md:text-base',
-      lg: 'text-base md:text-lg',
+      xs: 'text-[8px] md:text-[10px]',
+      sm: 'text-[9px] md:text-xs',
+      md: 'text-[10px] md:text-sm',
+      lg: 'text-xs md:text-base',
     },
     overlayTitle: {
-      xs: 'text-[10px] md:text-xs',
-      sm: 'text-xs md:text-sm',
-      md: 'text-sm md:text-base lg:text-lg',
-      lg: 'text-base md:text-lg lg:text-xl',
+      xs: 'text-[8px] md:text-[10px]',
+      sm: 'text-[9px] md:text-xs',
+      md: 'text-[10px] md:text-sm lg:text-base',
+      lg: 'text-xs md:text-base lg:text-lg',
     },
     overlaySubtext: {
-      xs: 'text-[8px] md:text-[10px]',
-      sm: 'text-[10px] md:text-xs',
-      md: 'text-xs md:text-sm',
-      lg: 'text-sm md:text-base',
+      xs: 'text-[6px] md:text-[8px]',
+      sm: 'text-[7px] md:text-[9px]',
+      md: 'text-[8px] md:text-[10px]',
+      lg: 'text-[9px] md:text-xs',
     },
   };
   const textSizes = {
@@ -361,14 +432,14 @@ const Block: React.FC<BlockProps> = ({
             onClick={() => onEdit(block)}
             data-block-id={block.id}
             className={`
-                relative ${colClass} ${rowClass} cursor-pointer
+                relative ${colClass} ${rowClass} cursor-pointer h-full
                 ${isSelected ? 'ring-2 ring-blue-500/50 bg-blue-50/50' : 'hover:bg-gray-100/50'}
                 ${isDragTarget ? 'ring-2 ring-violet-500 bg-violet-50/50 scale-[1.02]' : ''}
                 ${isDragging ? 'opacity-40 scale-95' : ''}
 	                transition-all duration-200 group
 	                flex items-center justify-center
 	            `}
-	            style={{ minHeight: '40px', borderRadius, ...gridPositionStyle }}
+	            style={{ borderRadius, ...gridPositionStyle }}
 	        >
 	             <div className={`text-gray-300 flex flex-col items-center gap-1 ${isSelected || isDragTarget ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
 	                 <MoveVertical size={20} />
@@ -430,7 +501,7 @@ const Block: React.FC<BlockProps> = ({
         }}
         data-block-id={block.id}
         className={`
-          bento-item relative cursor-pointer overflow-hidden
+          bento-item relative cursor-pointer overflow-hidden h-full
           ${block.color || 'bg-white'}
           ${isSelected ? 'ring-2 ring-violet-500 shadow-lg' : 'hover:ring-2 hover:ring-gray-300 hover:shadow-md'}
           ${isDragTarget ? 'ring-2 ring-violet-500 bg-violet-50/50 scale-105' : ''}
@@ -458,6 +529,20 @@ const Block: React.FC<BlockProps> = ({
             className="group-hover:scale-110 transition-transform"
           />
         ) : null}
+
+        {/* Delete button - appears on hover */}
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onDelete(block.id);
+          }}
+          className="absolute top-1 left-1 p-1 bg-red-500/80 hover:bg-red-600 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity z-20"
+          title="Delete"
+        >
+          <Trash2 size={12} />
+        </button>
+
         {resizeHandle}
       </motion.a>
     );
@@ -486,10 +571,11 @@ const Block: React.FC<BlockProps> = ({
         backgroundPosition: 'center'
       };
   } else if (isLinkWithImage && block.imageUrl) {
+      const pos = mediaPosition;
       finalStyle = {
         backgroundImage: `url(${block.imageUrl})`,
         backgroundSize: 'cover',
-        backgroundPosition: 'center'
+        backgroundPosition: `${pos.x}% ${pos.y}%`
       };
   }
 
@@ -540,7 +626,7 @@ const Block: React.FC<BlockProps> = ({
         animate={{ opacity: 1, scale: 1 }}
         whileHover={{ y: -4, transition: { duration: 0.2 } }}
         style={{ ...gridPositionStyle, borderRadius }}
-        className={`bento-item group relative overflow-hidden bg-white ${colClass} ${rowClass} cursor-pointer
+        className={`bento-item group relative overflow-hidden bg-white ${colClass} ${rowClass} cursor-pointer h-full
           ${isSelected ? 'ring-4 ring-blue-500 shadow-xl z-20' : 'ring-1 ring-black/5'}
           ${!isSelected ? 'shadow-sm hover:shadow-xl' : ''}
           ${isDragTarget ? 'ring-2 ring-violet-500 z-20 scale-[1.02]' : ''}
@@ -557,69 +643,42 @@ const Block: React.FC<BlockProps> = ({
 	        </div>
 	        {resizeHandle}
 
-	        <div className={`w-full h-full pointer-events-none flex flex-col ${isSmallBlock ? 'p-3' : 'p-4'}`}>
-          {/* YouTube Header - Compact for small blocks */}
-          <div className={`flex items-center gap-2 ${isSmallBlock ? 'mb-2 pb-2' : 'mb-3 pb-3'} border-b border-gray-100`}>
-            <div className={`${isSmallBlock ? 'w-7 h-7 rounded-lg' : 'w-9 h-9 rounded-xl'} bg-red-600 text-white flex items-center justify-center shadow-sm shrink-0`}>
-              <Youtube size={isSmallBlock ? 14 : 18}/>
+	        {/* Mobile: horizontal layout (header left, videos right) | Desktop: vertical layout */}
+	        <div className={`w-full h-full pointer-events-none flex flex-row md:flex-col p-2 md:p-4 gap-2 md:gap-0`}>
+          {/* YouTube Header - Side on mobile, top on desktop */}
+          <div className={`flex flex-col md:flex-row items-center gap-1 md:gap-2 md:mb-3 md:pb-3 md:border-b border-gray-100 shrink-0 w-16 md:w-auto`}>
+            <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg md:rounded-xl bg-red-600 text-white flex items-center justify-center shadow-sm shrink-0">
+              <Youtube size={14} className="md:w-[18px] md:h-[18px]"/>
             </div>
-            <div className="flex-1 min-w-0">
-              <h3 className={`${isSmallBlock ? 'text-xs' : 'text-sm'} font-bold text-gray-900 truncate`}>{block.channelTitle || 'YouTube'}</h3>
-              {!isSmallBlock && <span className="text-[10px] text-gray-400 font-medium">Latest Videos</span>}
+            <div className="flex-1 min-w-0 text-center md:text-left">
+              <h3 className="text-[10px] md:text-sm font-bold text-gray-900 line-clamp-2 md:truncate leading-tight">{block.channelTitle || 'YouTube'}</h3>
+              <span className="hidden md:block text-[10px] text-gray-400 font-medium">Latest Videos</span>
             </div>
-            {!isSmallBlock && <ExternalLink size={14} className="text-gray-300 group-hover:text-red-500 transition-colors shrink-0" />}
           </div>
 
-          {/* Videos Content - Adaptive */}
+          {/* Videos Content - Takes remaining space */}
           {isLoading ? (
             <div className="flex-1 flex items-center justify-center">
-              <Loader2 className="animate-spin text-gray-300" size={isSmallBlock ? 18 : 24}/>
+              <Loader2 className="animate-spin text-gray-300" size={18}/>
             </div>
           ) : (
-            <div className={`flex-1 ${getGridClass()} overflow-hidden`}>
-              {displayVideos.length > 0 ? displayVideos.map((vid, idx) => (
-                <div 
-                  key={idx} 
-                  className={`relative overflow-hidden group/vid transition-all duration-200 rounded-lg bg-gray-100 ${
-                    isTallBlock ? 'flex gap-2' : ''
-                  }`}
-                  style={!isTallBlock ? { aspectRatio: isSmallBlock ? '16/10' : '16/9' } : { height: isLargeBlock ? '23%' : '48px' }}
+            <div className="flex-1 grid grid-cols-2 gap-1 md:gap-2 overflow-hidden">
+              {displayVideos.length > 0 ? displayVideos.slice(0, 4).map((vid, idx) => (
+                <div
+                  key={idx}
+                  className="relative overflow-hidden group/vid transition-all duration-200 rounded md:rounded-lg bg-gray-100"
+                  style={{ aspectRatio: '16/10' }}
                 >
-                  {isTallBlock ? (
-                    /* Tall block - horizontal list items */
-                    <>
-                      <div className="w-20 h-full shrink-0 relative overflow-hidden bg-gray-200">
-                        <img src={vid.thumbnail} alt={vid.title} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover/vid:opacity-100 transition-opacity">
-                          <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center">
-                            <Play size={10} className="text-white ml-0.5" fill="white" />
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex-1 py-1 pr-2 flex items-center min-w-0">
-                        <p className="text-[11px] font-medium text-gray-700 line-clamp-2 leading-tight">{vid.title}</p>
-                      </div>
-                    </>
-                  ) : (
-                    /* Grid items */
-                    <>
-                      <img src={vid.thumbnail} alt={vid.title} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/35" />
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/vid:opacity-100 transition-all duration-200">
-                        <div className={`${isSmallBlock ? 'w-7 h-7' : 'w-9 h-9'} rounded-full bg-red-500 flex items-center justify-center shadow-lg`}>
-                          <Play size={isSmallBlock ? 12 : 16} className="text-white ml-0.5" fill="white" />
-                        </div>
-                      </div>
-                      {showTitles && (
-                        <div className="absolute bottom-0 left-0 right-0 p-1.5">
-                          <p className={`${isSmallBlock ? 'text-[9px]' : 'text-[10px]'} text-white font-medium line-clamp-1 leading-tight drop-shadow-md`}>{vid.title}</p>
-                        </div>
-                      )}
-                    </>
-                  )}
+                  <img src={vid.thumbnail} alt={vid.title} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/30" />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/vid:opacity-100 transition-all duration-200">
+                    <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-red-500 flex items-center justify-center shadow-lg">
+                      <Play size={10} className="md:w-3 md:h-3 text-white ml-0.5" fill="white" />
+                    </div>
+                  </div>
                 </div>
               )) : (
-                <div className="col-span-2 flex items-center justify-center text-xs text-gray-400 py-4">
+                <div className="col-span-2 flex items-center justify-center text-[10px] text-gray-400 py-2">
                   <span>No videos</span>
                 </div>
               )}
@@ -666,7 +725,7 @@ const Block: React.FC<BlockProps> = ({
       animate={{ opacity: 1, scale: 1 }}
       whileHover={enableTiltEffect ? undefined : { y: -4, transition: { duration: 0.2 } }}
       style={{ ...gridPositionStyle }}
-      className={`${colClass} ${rowClass} cursor-pointer select-none
+      className={`${colClass} ${rowClass} cursor-pointer select-none h-full
         ${isDragTarget ? 'z-20 scale-[1.02]' : ''}
         ${isDragging ? 'opacity-40 scale-95' : ''}
         ${enableTiltEffect ? 'transform-gpu' : ''}
@@ -701,23 +760,102 @@ const Block: React.FC<BlockProps> = ({
       <div className="absolute top-4 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-current/30 z-20 pointer-events-none">
           <GripHorizontal size={20} />
       </div>
+
+      {/* Delete button - appears on hover */}
+      <button
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onDelete(block.id);
+        }}
+        className="absolute top-2 left-2 p-1.5 bg-red-500/80 hover:bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-20 backdrop-blur-sm"
+        title="Delete block"
+      >
+        <Trash2 size={14} />
+      </button>
+
       {resizeHandle}
 
       {/* Gradient overlay for image backgrounds - only when there's text */}
-      {(isRichYoutube || isLinkWithImage) && (block.title || block.subtext || block.channelTitle) && (
+      {(isRichYoutube || isLinkWithImage) && (block.title || block.subtext || block.channelTitle) && !isRepositioning && (
          <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/70 via-black/30 to-transparent z-0 pointer-events-none" />
+      )}
+
+      {/* Reposition UI for LINK blocks with images */}
+      {isLinkWithImage && (
+        <>
+          {/* Reposition button - appears on hover */}
+          {!isRepositioning && onInlineUpdate && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsRepositioning(true);
+              }}
+              className="absolute top-2 right-2 p-2 bg-black/60 hover:bg-black/80 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-20 backdrop-blur-sm"
+              title="Reposition image"
+            >
+              <Move size={16} />
+            </button>
+          )}
+
+          {/* Repositioning mode overlay */}
+          {isRepositioning && (
+            <div
+              ref={mediaContainerRef}
+              className="absolute inset-0 z-30 cursor-move"
+              onMouseDown={handleMediaRepositionStart}
+              onTouchStart={handleMediaRepositionStart}
+            >
+              <div className="absolute inset-0 bg-black/20" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/70 text-white px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap backdrop-blur-sm">
+                Drag to reposition
+              </div>
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleCancelMediaPosition();
+                  }}
+                  className="p-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                  title="Cancel"
+                >
+                  <X size={16} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSaveMediaPosition();
+                  }}
+                  className="p-2 bg-green-600 hover:bg-green-500 text-white rounded-lg transition-colors"
+                  title="Save position"
+                >
+                  <Check size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <div className="w-full h-full pointer-events-none relative z-10">
         
         {/* MEDIA BLOCK (Image/Video/GIF) */}
         {block.type === BlockType.MEDIA && block.imageUrl && !isLinkWithImage ? (
-          <div className="w-full h-full relative overflow-hidden">
+          <div
+            ref={mediaContainerRef}
+            className={`w-full h-full relative overflow-hidden ${isRepositioning ? 'cursor-move' : ''}`}
+            onMouseDown={isRepositioning ? handleMediaRepositionStart : undefined}
+            onTouchStart={isRepositioning ? handleMediaRepositionStart : undefined}
+          >
               {/* Check if it's a video or gif */}
               {/\.(mp4|webm|ogg|mov)$/i.test(block.imageUrl) ? (
                 <video
                   src={block.imageUrl}
                   className="full-img"
+                  style={{ objectPosition: `${mediaPosition.x}% ${mediaPosition.y}%` }}
                   autoPlay
                   loop
                   muted
@@ -728,10 +866,65 @@ const Block: React.FC<BlockProps> = ({
                   src={block.imageUrl}
                   alt={block.title || ''}
                   className="full-img"
+                  style={{ objectPosition: `${mediaPosition.x}% ${mediaPosition.y}%` }}
+                  draggable={false}
                 />
               )}
+
+              {/* Reposition button - appears on hover */}
+              {!isRepositioning && onInlineUpdate && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsRepositioning(true);
+                  }}
+                  className="absolute top-2 right-2 p-2 bg-black/60 hover:bg-black/80 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto z-20 backdrop-blur-sm"
+                  title="Reposition media"
+                >
+                  <Move size={16} />
+                </button>
+              )}
+
+              {/* Repositioning mode UI */}
+              {isRepositioning && (
+                <>
+                  {/* Overlay with instructions */}
+                  <div className="absolute inset-0 bg-black/20 pointer-events-none z-10" />
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/70 text-white px-4 py-2 rounded-lg text-sm font-medium pointer-events-none z-20 whitespace-nowrap backdrop-blur-sm">
+                    Drag to reposition
+                  </div>
+
+                  {/* Save/Cancel buttons */}
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2 pointer-events-auto z-20">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleCancelMediaPosition();
+                      }}
+                      className="p-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                      title="Cancel"
+                    >
+                      <X size={16} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleSaveMediaPosition();
+                      }}
+                      className="p-2 bg-green-600 hover:bg-green-500 text-white rounded-lg transition-colors"
+                      title="Save position"
+                    >
+                      <Check size={16} />
+                    </button>
+                  </div>
+                </>
+              )}
+
               {/* Subtle gradient from bottom for optional text */}
-              {block.title && (
+              {block.title && !isRepositioning && (
                 <div className="media-overlay">
                   <p className={`media-title ${textSizes.overlayTitle}`}>{block.title}</p>
                   {block.subtext && <p className={`media-subtext ${textSizes.overlaySubtext}`}>{block.subtext}</p>}
@@ -754,26 +947,26 @@ const Block: React.FC<BlockProps> = ({
           </div>
         ) : isRichYoutube ? (
           /* YOUTUBE SINGLE VIDEO */
-          <div className="w-full h-full flex flex-col justify-between p-6">
+          <div className="w-full h-full flex flex-col justify-between p-2 md:p-4 lg:p-6">
             {/* Top: YouTube Icon */}
             <div className="flex justify-between items-start">
-              <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shadow-lg">
-                <Youtube size={22}/>
+              <div className="w-7 h-7 md:w-10 md:h-10 lg:w-12 lg:h-12 rounded-lg md:rounded-xl lg:rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shadow-lg">
+                <Youtube size={14} className="md:w-[18px] md:h-[18px] lg:w-[22px] lg:h-[22px]"/>
               </div>
             </div>
 
             {/* Center: Play Button */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center shadow-2xl shadow-red-500/30 transform group-hover:scale-110 transition-transform duration-300">
-                <Play size={28} className="text-white ml-1" fill="white" />
+              <div className="w-8 h-8 md:w-12 md:h-12 lg:w-16 lg:h-16 rounded-full bg-red-500 flex items-center justify-center shadow-2xl shadow-red-500/30 transform group-hover:scale-110 transition-transform duration-300">
+                <Play size={14} className="md:w-5 md:h-5 lg:w-7 lg:h-7 text-white ml-0.5" fill="white" />
               </div>
             </div>
 
             {/* Bottom: Info */}
             <div className="mt-auto">
-              <div className="-mx-6 -mb-6 p-5">
+              <div className="-mx-2 -mb-2 md:-mx-4 md:-mb-4 lg:-mx-6 lg:-mb-6 p-2 md:p-3 lg:p-5">
                 <h3 className={`font-bold text-white leading-tight drop-shadow-lg ${textSizes.overlayTitle}`}>{block.channelTitle || block.title}</h3>
-                {block.subtext && <p className={`text-white/80 mt-1 font-medium drop-shadow ${textSizes.overlaySubtext}`}>{block.subtext}</p>}
+                {block.subtext && <p className={`text-white/80 mt-0.5 md:mt-1 font-medium drop-shadow ${textSizes.overlaySubtext}`}>{block.subtext}</p>}
               </div>
             </div>
           </div>
@@ -782,15 +975,33 @@ const Block: React.FC<BlockProps> = ({
           <div className="p-3 md:p-4 lg:p-6 h-full flex flex-col justify-between relative">
             <div className="flex justify-between items-start">
                {/* Only show icon for SOCIAL blocks, not LINK or TEXT */}
-               {block.type === BlockType.SOCIAL && (
-                 <div className={`w-8 h-8 md:w-10 md:h-10 lg:w-11 lg:h-11 rounded-xl md:rounded-2xl flex items-center justify-center shadow-sm ${
-                   block.textColor === 'text-white' || isLinkWithImage
-                     ? 'bg-white/20 text-white backdrop-blur-md'
-                     : 'bg-white/90 shadow-md'
-                 }`}>
-                   {getIcon()}
-                 </div>
-               )}
+               {block.type === BlockType.SOCIAL && (() => {
+                 const platform = block.socialPlatform ?? inferSocialPlatformFromUrl(block.content);
+                 const option = platform ? getSocialPlatformOption(platform) : undefined;
+                 const BrandIcon = option?.brandIcon;
+                 const FallbackIcon = option?.icon;
+                 const brandColor = option?.brandColor;
+
+                 // Support icon color modes like SOCIAL_ICON
+                 const useColor = block.textColor === 'text-brand';
+                 const iconColor = useColor ? brandColor : undefined;
+
+                 return (
+                   <div className={`w-8 h-8 md:w-10 md:h-10 lg:w-11 lg:h-11 rounded-xl md:rounded-2xl flex items-center justify-center shadow-sm ${
+                     block.textColor === 'text-white' || isLinkWithImage
+                       ? 'bg-white/20 text-white backdrop-blur-md'
+                       : 'bg-white/90 shadow-md'
+                   }`}>
+                     {BrandIcon ? (
+                       <BrandIcon size={20} style={iconColor ? { color: iconColor } : undefined} />
+                     ) : FallbackIcon ? (
+                       <FallbackIcon size={20} style={iconColor ? { color: iconColor } : undefined} />
+                     ) : (
+                       getIcon()
+                     )}
+                   </div>
+                 );
+               })()}
             </div>
 
             <div className={`${block.type === BlockType.TEXT ? 'flex flex-col justify-center h-full' : 'mt-auto'}`}>

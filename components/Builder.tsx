@@ -448,38 +448,6 @@ const Builder: React.FC<BuilderProps> = ({ onBack }) => {
     if (!isSidebarOpen) setIsSidebarOpen(true);
   };
 
-  // Add a social icon block directly from configured account
-  const addSocialIconBlock = (platform: string, handle: string) => {
-    let gridPosition: { col?: number; row?: number } = {};
-    const pendingPosition = sessionStorage.getItem('pendingBlockPosition');
-    if (pendingPosition) {
-      try {
-        const { col, row } = JSON.parse(pendingPosition);
-        gridPosition = { col, row };
-      } catch {
-        // ignore
-      }
-      sessionStorage.removeItem('pendingBlockPosition');
-    }
-
-    const newBlock: BlockData = {
-      id: Math.random().toString(36).substr(2, 9),
-      type: BlockType.SOCIAL_ICON,
-      title: '',
-      content: '',
-      colSpan: 1,
-      rowSpan: 1,
-      color: 'bg-white',
-      textColor: 'text-gray-900',
-      gridColumn: gridPosition.col,
-      gridRow: gridPosition.row,
-      socialPlatform: platform as any,
-      socialHandle: handle,
-    };
-    handleSetBlocks([...blocks, newBlock]);
-    // Don't open sidebar for social icons - they're pre-configured
-  };
-
   const updateBlock = (updatedBlock: BlockData) => {
     handleSetBlocks(blocks.map(b => b.id === updatedBlock.id ? updatedBlock : b));
   };
@@ -1035,11 +1003,33 @@ const Builder: React.FC<BuilderProps> = ({ onBack }) => {
     );
   }
 
+  // Background style from profile settings
+  const backgroundStyle: React.CSSProperties = profile.backgroundImage
+    ? {
+        backgroundImage: `url(${profile.backgroundImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+      }
+    : profile.backgroundColor
+      ? { backgroundColor: profile.backgroundColor }
+      : { backgroundColor: '#f9fafb' }; // default gray-50
+
   return (
-    <div className="min-h-screen bg-gray-50 flex font-sans overflow-x-hidden">
-      
+    <div className="min-h-screen flex font-sans overflow-x-hidden relative" style={backgroundStyle}>
+      {/* Background blur overlay */}
+      {profile.backgroundImage && profile.backgroundBlur && profile.backgroundBlur > 0 && (
+        <div
+          className="absolute inset-0 z-0"
+          style={{
+            backdropFilter: `blur(${profile.backgroundBlur}px)`,
+            WebkitBackdropFilter: `blur(${profile.backgroundBlur}px)`,
+          }}
+        />
+      )}
+
       {/* 1. MAIN PREVIEW CANVAS */}
-      <div className="flex-1 relative min-h-screen">
+      <div className="flex-1 relative min-h-screen z-10">
         
         {/* Floating Navbar */}
         <nav className="fixed top-4 left-4 right-4 z-40 pointer-events-none">
@@ -1648,7 +1638,6 @@ const Builder: React.FC<BuilderProps> = ({ onBack }) => {
          isOpen={isSidebarOpen}
          profile={profile}
          addBlock={addBlock}
-         addSocialIconBlock={addSocialIconBlock}
          editingBlock={editingBlock}
          updateBlock={updateBlock}
          onDelete={deleteBlock}

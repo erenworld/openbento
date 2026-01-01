@@ -51,6 +51,7 @@ export interface BlockData {
   content?: string; // URL or Text
   subtext?: string;
   imageUrl?: string;
+  mediaPosition?: { x: number; y: number }; // Object position for media (0-100 for each axis)
   colSpan: number; // 1-9 (9-col grid)
   rowSpan: number; // 1+ (builder clamps to 50)
   color?: string; // Tailwind class like 'bg-blue-100'
@@ -96,6 +97,10 @@ export interface UserProfile {
   showBranding?: boolean;
   showSocialInHeader?: boolean; // Show social icons row under name/bio
   showFollowerCount?: boolean; // Show follower count next to social icons
+  // Background customization
+  backgroundColor?: string; // CSS color value (hex, rgb, etc.)
+  backgroundImage?: string; // URL or data URL for background image
+  backgroundBlur?: number; // Blur amount for background image (0-20)
   analytics?: {
     enabled?: boolean;
     supabaseUrl?: string; // https://<project-ref>.supabase.co

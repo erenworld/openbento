@@ -15,7 +15,6 @@ import {
 interface EditorSidebarProps {
   profile: UserProfile;
   addBlock: (type: BlockType) => void;
-  addSocialIconBlock: (platform: string, handle: string) => void;
   editingBlock: BlockData | null;
   updateBlock: (b: BlockData) => void;
   onDelete: (id: string) => void;
@@ -26,7 +25,6 @@ interface EditorSidebarProps {
 const EditorSidebar: React.FC<EditorSidebarProps> = ({
   profile,
   addBlock,
-  addSocialIconBlock,
   editingBlock,
   updateBlock,
   onDelete,
@@ -457,6 +455,37 @@ const EditorSidebar: React.FC<EditorSidebarProps> = ({
 	                            </a>
 	                          </div>
 	                        )}
+
+	                        {/* Icon Color Style for SOCIAL blocks */}
+	                        <div>
+	                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Icon Color</label>
+	                          <div className="flex gap-2">
+	                            <button
+	                              type="button"
+	                              onClick={() => updateBlock({ ...editingBlock, textColor: 'text-brand' })}
+	                              className={`flex-1 py-2 px-3 rounded-lg border text-xs font-semibold transition-all flex items-center justify-center gap-2 ${
+	                                editingBlock.textColor === 'text-brand'
+	                                  ? 'bg-violet-600 text-white border-violet-600'
+	                                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+	                              }`}
+	                            >
+	                              <span className="w-3 h-3 rounded-full" style={{ background: getSocialPlatformOption(editingBlock.socialPlatform)?.brandColor || '#6366f1' }} />
+	                              Color
+	                            </button>
+	                            <button
+	                              type="button"
+	                              onClick={() => updateBlock({ ...editingBlock, textColor: undefined })}
+	                              className={`flex-1 py-2 px-3 rounded-lg border text-xs font-semibold transition-all flex items-center justify-center gap-2 ${
+	                                !editingBlock.textColor || editingBlock.textColor === 'text-black'
+	                                  ? 'bg-gray-800 text-white border-gray-800'
+	                                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+	                              }`}
+	                            >
+	                              <span className="w-3 h-3 rounded-full bg-gray-600" />
+	                              Default
+	                            </button>
+	                          </div>
+	                        </div>
 	                      </div>
 	                    )}
 	                  </div>
@@ -660,40 +689,6 @@ const EditorSidebar: React.FC<EditorSidebarProps> = ({
 	              </div>
 	            </section>
 
-                {/* Social Icons - from configured accounts */}
-                {profile.socialAccounts && profile.socialAccounts.length > 0 && (
-                  <section className="space-y-5">
-                    <div className="flex items-center gap-2">
-                      <div className="w-1 h-5 bg-violet-600 rounded-full"></div>
-                      <h3 className="text-base font-bold text-gray-900">Social Icons</h3>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Add small social icons from your configured accounts.
-                    </p>
-                    <div className="grid grid-cols-4 gap-2">
-                      {profile.socialAccounts.map((account) => {
-                        const option = getSocialPlatformOption(account.platform);
-                        if (!option) return null;
-                        const Icon = option.icon;
-                        return (
-                          <button
-                            key={account.platform}
-                            onClick={() => addSocialIconBlock(account.platform, account.handle)}
-                            className="flex flex-col items-center gap-1.5 p-3 bg-white border border-gray-100 rounded-xl hover:border-violet-300 hover:bg-violet-50 hover:shadow-md transition-all group"
-                            title={`Add ${option.label} icon`}
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-gray-100 group-hover:bg-violet-100 flex items-center justify-center text-gray-600 group-hover:text-violet-600 transition-colors">
-                              <Icon size={16} />
-                            </div>
-                            <span className="text-[10px] font-medium text-gray-500 group-hover:text-violet-600 truncate max-w-full">
-                              {option.label}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </section>
-                )}
 	          </div>
 	        )}
 	      </div>
