@@ -3,7 +3,9 @@
 **A beautiful, open-source bento grid generator for creating stunning link-in-bio pages**
 
 [![Deploy to GitHub Pages](https://github.com/yoanbernabeu/openbento/actions/workflows/deploy.yml/badge.svg)](https://github.com/yoanbernabeu/openbento/actions/workflows/deploy.yml)
+[![Docker Build & Publish](https://github.com/yoanbernabeu/openbento/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/yoanbernabeu/openbento/actions/workflows/docker-publish.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Docker Pulls](https://img.shields.io/docker/pulls/yoanbernabeu/openbento)](https://hub.docker.com/r/yoanbernabeu/openbento)
 
 [Live Demo](https://yoanbernabeu.github.io/openbento/) • [Report Bug](https://github.com/yoanbernabeu/openbento/issues) • [Request Feature](https://github.com/yoanbernabeu/openbento/issues)
 
@@ -96,6 +98,57 @@ npm run build
 ```
 
 The built files will be in the `dist` directory.
+
+## 🐳 Using Docker
+
+OpenBento is available as a multi-platform Docker image supporting both AMD64 and ARM64 architectures (Intel/AMD servers, Mac M1/M2/M3, ARM servers, Raspberry Pi 4+).
+
+### Quick Start with Docker
+
+Pull and run the latest image:
+
+```bash
+docker run -d -p 8080:80 yoanbernabeu/openbento:latest
+```
+
+Then open [http://localhost:8080](http://localhost:8080) in your browser.
+
+### Multi-Platform Support
+
+The Docker image supports multiple architectures:
+- **linux/amd64** - Intel/AMD 64-bit (standard servers, PCs)
+- **linux/arm64** - ARM 64-bit (Mac M1/M2/M3, AWS Graviton, Raspberry Pi 4+)
+
+Docker automatically selects the correct image for your architecture.
+
+### Building Your Own Image
+
+```bash
+# Build for your current platform
+docker build -t openbento .
+
+# Build for multiple platforms
+docker buildx build --platform linux/amd64,linux/arm64 -t openbento .
+```
+
+### Docker Compose
+
+Create a `compose.yml`:
+
+```yaml
+services:
+  openbento:
+    image: yoanbernabeu/openbento:latest
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+```
+
+Run with:
+
+```bash
+docker compose up -d
+```
 
 ## 🤝 Contributing
 
